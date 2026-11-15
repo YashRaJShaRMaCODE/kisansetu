@@ -8,13 +8,12 @@ class TrustScorePermission(permissions.BasePermission):
         return request.user.role in (
             "farmer",
             "admin",
-            "bank",
             "government",
         )
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if user.role in ("admin", "bank", "government") or user.is_superuser:
+        if user.role in ("admin", "government") or user.is_superuser:
             return True
         if user.role == "farmer":
             return (

@@ -32,7 +32,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == "farmer" and hasattr(user, "farmer_profile"):
             return self.queryset.filter(farmer=user.farmer_profile)
-        if user.role in ("admin", "government", "bank"):
+        if user.role in ("admin", "government") or user.is_superuser:
             return self.queryset
         return Complaint.objects.none()
 

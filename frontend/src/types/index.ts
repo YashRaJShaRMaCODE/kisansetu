@@ -189,7 +189,6 @@ export interface VillageAnalytics {
 export interface Listing {
   id: number;
   farmer: number;
-  farmer_email: string;
   farmer_name?: string;
   farmer_village?: string;
   crop: number;

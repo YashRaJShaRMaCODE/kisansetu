@@ -116,20 +116,6 @@ interface GovernmentDashboard {
   total_farmers: number;
 }
 
-interface BankDashboard {
-  total_farmers: number;
-  verified_farmers: number;
-  trust_score_distribution: Record<string, number>;
-  average_trust_score: number;
-  high_risk_farmers: number;
-  excellent_farmers: number;
-  loan_predictions: number;
-  low_risk_loans: number;
-  medium_risk_loans: number;
-  high_risk_loans: number;
-  total_transaction_volume: number;
-}
-
 export function FarmerDashboardView() {
   const { locale, t } = useTranslation();
   const { data, isLoading, isError, refetch } = useQuery({
@@ -830,23 +816,6 @@ export function GovernmentDashboardView() {
 
 export function BankDashboardView() {
   const { t } = useTranslation();
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["dashboard", "bank"],
-    queryFn: async () => (await dashboardApi.bank()).data as unknown as BankDashboard,
-  });
-
-  useDashboardError(isError, "Could not load bank dashboard");
-
-  if (isLoading) return <PageSkeleton />;
-  if (isError) return <ErrorState message="Failed to load lending analytics." onRetry={() => refetch()} />;
-  if (!data) return null;
-
-  const trustDistribution = dictToChartData(data.trust_score_distribution);
-  const loanRiskData = [
-    { band: "low", name: t("pages.dashboard.riskCategories.low"), count: data.low_risk_loans },
-    { band: "medium", name: t("pages.dashboard.riskCategories.medium"), count: data.medium_risk_loans },
-    { band: "high", name: t("pages.dashboard.riskCategories.high"), count: data.high_risk_loans },
-  ];
 
   return (
     <div className="space-y-6">
@@ -854,108 +823,9 @@ export function BankDashboardView() {
         title={t("pages.dashboard.bankTitle")}
         description={t("pages.dashboard.bankDescription")}
       />
-      <p role="note" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-        {t("pages.loanEligibility.estimateDisclaimer")}
-      </p>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="Total Farmers"
-          value={data.total_farmers}
-          subtitle={`${data.verified_farmers} verified`}
-          href="/trust-score"
-          icon={Users}
-        />
-        <StatCard
-          title="Avg Trust Score"
-          value={Math.round(data.average_trust_score)}
-          href="/trust-score"
-          icon={Shield}
-        />
-        <StatCard
-          title="Excellent Farmers"
-          value={data.excellent_farmers}
-          subtitle={`${data.high_risk_farmers} high risk`}
-          href="/trust-score"
-        />
-        <StatCard
-          title="Loan Predictions"
-          value={data.loan_predictions}
-          href="/loan-eligibility"
-          icon={CreditCard}
-        />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Trust Score Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
-            {trustDistribution.length === 0 ? (
-              <EmptyState title="No trust data" description="Trust scores have not been calculated yet." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={trustDistribution}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={2}
-                  >
-                    {trustDistribution.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #d1fae5" }} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Loan Risk Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={loanRiskData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #d1fae5" }} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                  {loanRiskData.map((entry) => (
-                    <Cell
-                      key={entry.name}
-                      fill={
-                        entry.band === "low"
-                          ? "#059669"
-                          : entry.band === "medium"
-                            ? "#f59e0b"
-                            : "#ef4444"
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <StatCard
-        title="Total Transaction Volume"
-        value={formatCurrency(data.total_transaction_volume)}
-        subtitle="Completed marketplace transactions"
-        href="/loan-eligibility"
-        className="max-w-md"
+      <EmptyState
+        title={t("pages.dashboard.bankAccessTitle")}
+        description={t("pages.dashboard.bankAccessDescription")}
       />
     </div>
   );

@@ -1,12 +1,11 @@
-from rest_framework import serializers
-
 from farmers.services import get_farmer_badges
-from marketplace.models import Listing, Transaction
+from rest_framework import serializers
 from trustscore.models import TrustScore
+
+from marketplace.models import Listing, Transaction
 
 
 class ListingSerializer(serializers.ModelSerializer):
-    farmer_email = serializers.EmailField(source="farmer.user.email", read_only=True)
     farmer_name = serializers.SerializerMethodField()
     farmer_village = serializers.CharField(source="farmer.village", read_only=True)
     crop_name = serializers.CharField(source="crop.crop_name", read_only=True)
@@ -19,10 +18,9 @@ class ListingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Listing
-        fields = [
+        fields = (
             "id",
             "farmer",
-            "farmer_email",
             "farmer_name",
             "farmer_village",
             "crop",
@@ -36,12 +34,22 @@ class ListingSerializer(serializers.ModelSerializer):
             "farmer_trust_category",
             "farmer_badges",
             "is_verified_farmer",
-        ]
-        read_only_fields = ["id", "farmer", "created_at"]
+        )
+        read_only_fields = ("id", "farmer", "created_at")
 
     def get_farmer_name(self, obj):
         u = obj.farmer.user
-        return f"{u.first_name} {u.last_name}".strip() or u.email
+        return f"{u.first_name} {u.last_name}".strip()
+
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantity must be greater than zero.")
+        return value
+
+    def validate_price_per_unit(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Price must be greater than zero.")
+        return value
 
     def get_farmer_trust_score(self, obj):
         ts = TrustScore.objects.filter(farmer=obj.farmer).first()
@@ -66,7 +74,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = [
+        fields = (
             "id",
             "listing",
             "listing_crop",
@@ -77,13 +85,36 @@ class TransactionSerializer(serializers.ModelSerializer):
             "total_amount",
             "status",
             "transaction_date",
-        ]
-        read_only_fields = ["id", "buyer", "total_amount", "transaction_date"]
+        )
+        read_only_fields = ("id", "buyer", "total_amount", "transaction_date")
 
     def validate(self, attrs):
         listing = attrs.get("listing") or self.instance.listing
         quantity = attrs.get("quantity", self.instance.quantity if self.instance else None)
-        if listing and quantity and quantity > listing.quantity:
+        status = attrs.get("status", self.instance.status if self.instance else "pending")
+        if quantity is not None and quantity <= 0:
+            raise serializers.ValidationError(
+                {"quantity": "Quantity must be greater than zero."}
+            )
+        if self.instance is None and status != "pending":
+            raise serializers.ValidationError(
+                {"status": "New transactions must start as pending."}
+            )
+        if self.instance is not None:
+            changes = set(attrs) - {"status"}
+            if changes:
+                raise serializers.ValidationError(
+                    {"detail": "Only transaction status can be updated."}
+                )
+            if status != self.instance.status and self.instance.status != "pending":
+                raise serializers.ValidationError(
+                    {"status": "Only pending transactions can change status."}
+                )
+        if self.instance is None and listing.status != "active":
+            raise serializers.ValidationError(
+                {"listing": "This listing is no longer available."}
+            )
+        if self.instance is None and quantity > listing.quantity:
             raise serializers.ValidationError(
                 {"quantity": "Quantity exceeds available listing quantity."}
             )

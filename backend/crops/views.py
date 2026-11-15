@@ -23,7 +23,7 @@ class CropRecordViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == "farmer" and hasattr(user, "farmer_profile"):
             return self.queryset.filter(farmer=user.farmer_profile)
-        if user.role in ("admin", "government", "bank", "buyer"):
+        if user.role in ("admin", "government", "buyer") or user.is_superuser:
             return self.queryset
         return CropRecord.objects.none()
 

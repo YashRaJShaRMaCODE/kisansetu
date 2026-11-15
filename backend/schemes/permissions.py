@@ -18,15 +18,12 @@ class SchemeApplicationPermission(permissions.BasePermission):
             "farmer",
             "admin",
             "government",
-            "bank",
         )
 
     def has_object_permission(self, request, view, obj):
         user = request.user
         if user.role in ("admin", "government") or user.is_superuser:
             return True
-        if user.role == "bank":
-            return request.method in permissions.SAFE_METHODS
         if user.role == "farmer":
             if request.method in permissions.SAFE_METHODS:
                 return (

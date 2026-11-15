@@ -97,6 +97,7 @@ export default function LoanEligibilityPage() {
   const { data: predictions, isLoading, isError, refetch } = useQuery({
     queryKey: ["loans"],
     queryFn: async () => (await loansApi.list()).data.results,
+    enabled: user?.role === "farmer" || user?.role === "admin",
   });
 
   const calculate = useMutation({
@@ -109,6 +110,21 @@ export default function LoanEligibilityPage() {
   });
 
   const latest = predictions?.[0];
+
+  if (user?.role === "bank") {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t("pages.loanEligibility.title")}
+          description={t("pages.loanEligibility.description")}
+        />
+        <EmptyState
+          title={t("pages.dashboard.bankAccessTitle")}
+          description={t("pages.dashboard.bankAccessDescription")}
+        />
+      </div>
+    );
+  }
 
   if (isLoading) return <PageSkeleton />;
 

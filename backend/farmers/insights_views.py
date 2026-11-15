@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from schemes.services import recommend_schemes_for_farmer
 
 from farmers.services import (
     get_activity_timeline,
@@ -11,7 +12,6 @@ from farmers.services import (
     get_profile_completion,
     simulate_trust_score,
 )
-from schemes.services import recommend_schemes_for_farmer
 
 
 class FarmerProfileStatusView(APIView):
@@ -32,6 +32,8 @@ class FarmerBadgesView(APIView):
     def get(self, request):
         farmer_id = request.query_params.get("farmer_id")
         if farmer_id:
+            if request.user.role != "admin" and not request.user.is_superuser:
+                return Response({"detail": "Farmer data is not shared with this account."}, status=404)
             from farmers.models import Farmer
 
             try:
@@ -72,7 +74,7 @@ class FarmerHealthCardView(APIView):
 
     def get(self, request):
         farmer_id = request.query_params.get("farmer_id")
-        if farmer_id and request.user.role in ("admin", "bank", "government", "buyer"):
+        if farmer_id and (request.user.role == "admin" or request.user.is_superuser):
             from farmers.models import Farmer
 
             try:

@@ -11,12 +11,27 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kisansetu_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d kisansetu_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
     env:
       DJANGO_SECRET_KEY: local-ci-only-key-not-for-production
       DEBUG: "True"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kisansetu_ci
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

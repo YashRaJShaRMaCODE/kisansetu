@@ -11,7 +11,6 @@ class CropRecordPermission(permissions.BasePermission):
             "farmer",
             "admin",
             "government",
-            "bank",
             "buyer",
         )
 
@@ -19,7 +18,7 @@ class CropRecordPermission(permissions.BasePermission):
         user = request.user
         if user.role in ("admin", "government") or user.is_superuser:
             return True
-        if user.role in ("bank", "buyer"):
+        if user.role == "buyer":
             return request.method in permissions.SAFE_METHODS
         if user.role == "farmer":
             return (

@@ -43,14 +43,8 @@ class TransactionPermission(permissions.BasePermission):
                 hasattr(user, "farmer_profile")
                 and obj.listing.farmer_id == user.farmer_profile.id
             )
-        if user.role in ("bank", "government"):
-            return request.method in permissions.SAFE_METHODS
         return False
 
 
 def user_role_allowed(role, method):
-    if role in ("admin", "buyer", "farmer"):
-        return True
-    if role in ("bank", "government"):
-        return method in permissions.SAFE_METHODS
-    return False
+    return role in ("admin", "buyer", "farmer")

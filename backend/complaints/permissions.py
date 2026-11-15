@@ -5,7 +5,7 @@ class ComplaintPermission(permissions.BasePermission):
     """
     Farmer: create and view own complaints.
     Government/Admin: review and update all complaints.
-    Bank: read-only.
+    Bank: no access until farmer-controlled sharing is available.
     Buyer: no access.
     """
 
@@ -16,14 +16,12 @@ class ComplaintPermission(permissions.BasePermission):
             return False
         if request.method == "POST":
             return request.user.role == "farmer"
-        return request.user.role in ("farmer", "admin", "government", "bank")
+        return request.user.role in ("farmer", "admin", "government") or request.user.is_superuser
 
     def has_object_permission(self, request, view, obj):
         user = request.user
         if user.role in ("admin", "government") or user.is_superuser:
             return True
-        if user.role == "bank":
-            return request.method in permissions.SAFE_METHODS
         if user.role == "farmer":
             return (
                 hasattr(user, "farmer_profile")

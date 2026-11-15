@@ -61,7 +61,7 @@ export default function MarketplacePage() {
   const STATUS_OPTIONS = [
     { value: "active", label: t("common.active") },
     { value: "sold", label: t("pages.marketplace.sold") },
-    { value: "cancelled", label: t("pages.marketplace.cancelled") },
+    { value: "closed", label: t("pages.marketplace.closed") },
   ];
 
   const SORT_OPTIONS = [
@@ -93,7 +93,7 @@ export default function MarketplacePage() {
       result = result.filter(
         (l) =>
           l.crop_name.toLowerCase().includes(q) ||
-          l.farmer_email.toLowerCase().includes(q) ||
+          l.farmer_name?.toLowerCase().includes(q) ||
           l.description?.toLowerCase().includes(q)
       );
     }
@@ -236,11 +236,11 @@ export default function MarketplacePage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{t("pages.marketplace.quantity")}</Label>
-                  <Input name="quantity" type="number" step="0.01" required />
+                  <Input name="quantity" type="number" min="0.01" step="0.01" required />
                 </div>
                 <div className="space-y-2">
                   <Label>{t("pages.marketplace.pricePerUnit")}</Label>
-                  <Input name="price_per_unit" type="number" step="0.01" required />
+                  <Input name="price_per_unit" type="number" min="0.01" step="0.01" required />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>{t("common.description")}</Label>
@@ -289,7 +289,7 @@ export default function MarketplacePage() {
               <CardContent className="space-y-3">
                 <p className="flex items-center gap-1 text-sm text-emerald-700">
                   <User className="h-3.5 w-3.5" />
-                  {listing.farmer_email}
+                  {listing.farmer_name || t("common.farmer")}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {listing.is_verified_farmer && <VerifiedBadge />}
@@ -410,7 +410,7 @@ export default function MarketplacePage() {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-emerald-600">{t("common.farmer")}</span>
-              <span className="font-medium">{detailListing.farmer_email}</span>
+              <span className="font-medium">{detailListing.farmer_name || t("common.farmer")}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-emerald-600">Price</span>

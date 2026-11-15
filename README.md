@@ -104,6 +104,8 @@ Quick checklist:
 
 Public registration is limited to farmer and buyer accounts. Government, bank, and admin roles must be assigned through a trusted admin workflow. Farmers receive a private profile at signup; Aadhaar is optional. Trust and eligibility scores are guidance only, not bank decisions or government approvals.
 
+Bank-role accounts are excluded from private farmer records and per-farmer analytics, including land/crop records, complaints, transactions, trust and health data, and loan estimates. The app has no farmer-consent or institution-scoped sharing workflow; add and review that control before enabling lender access. Public marketplace listings and scheme catalogues remain available under their existing rules.
+
 ## API Modules
 
 | Module | Endpoints |

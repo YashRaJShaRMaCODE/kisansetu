@@ -26,7 +26,7 @@ class TrustScoreViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         if user.role == "farmer" and hasattr(user, "farmer_profile"):
             return self.queryset.filter(farmer=user.farmer_profile)
-        if user.role in ("admin", "bank", "government"):
+        if user.role in ("admin", "government") or user.is_superuser:
             return self.queryset
         return TrustScore.objects.none()
 
@@ -45,7 +45,7 @@ class TrustScoreViewSet(viewsets.ReadOnlyModelViewSet):
         farmer_id = request.data.get("farmer_id")
         if not farmer_id:
             return Response(
-                {"detail": "farmer_id is required for admin/bank/government."},
+                {"detail": "farmer_id is required for admin/government."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         from farmers.models import Farmer

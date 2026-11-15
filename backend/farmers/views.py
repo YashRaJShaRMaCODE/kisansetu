@@ -27,7 +27,7 @@ class FarmerViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == "farmer" and hasattr(user, "farmer_profile"):
             return self.queryset.filter(pk=user.farmer_profile.pk)
-        if user.role in ("buyer", "bank", "government"):
+        if user.role in ("buyer", "government"):
             return self.queryset
         if user.role == "admin" or user.is_superuser:
             return self.queryset

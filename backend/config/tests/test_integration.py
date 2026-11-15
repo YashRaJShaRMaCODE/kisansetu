@@ -1,19 +1,18 @@
 """
 Integration tests for API routes, JWT auth, dashboards, trust score, and loans.
 """
-from decimal import Decimal
 import json
+from decimal import Decimal
 
+from crops.models import CropRecord
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-
-from crops.models import CropRecord
 from farmers.models import Farmer
 from lands.models import LandRecord
 from loans.services import calculate_loan_eligibility
+from rest_framework import status
+from rest_framework.test import APITestCase
 from trustscore.models import TrustScore
 from trustscore.services import (
     calculate_trust_score,
@@ -22,6 +21,66 @@ from trustscore.services import (
 )
 
 User = get_user_model()
+
+
+class BankPrivateDataAccessTestCase(APITestCase):
+    def setUp(self):
+        self.bank = User.objects.create_user(
+            email="bank-privacy@test.com",
+            username="bankprivacy",
+            password="SecurePass123!",
+            role="bank",
+        )
+        self.client.force_authenticate(user=self.bank)
+
+    def test_bank_cannot_read_farmer_records_or_analytics(self):
+        for route in (
+            "/api/farmers/",
+            "/api/lands/",
+            "/api/crops/",
+            "/api/transactions/",
+            "/api/applications/",
+            "/api/complaints/",
+            "/api/trust-scores/",
+            "/api/loans/",
+            "/api/dashboard/bank/",
+            "/api/dashboard/village/",
+        ):
+            with self.subTest(route=route):
+                self.assertEqual(self.client.get(route).status_code, 403)
+
+    def test_bank_cannot_request_another_farmers_health_data(self):
+        badges = self.client.get("/api/farmers/me/badges/?farmer_id=1")
+        health_card = self.client.get("/api/farmers/me/health-card/?farmer_id=1")
+
+        self.assertEqual(badges.status_code, 404)
+        self.assertEqual(health_card.status_code, 404)
+
+    def test_government_role_cannot_read_another_farmers_private_health_data(self):
+        government = User.objects.create_user(
+            email="government-privacy@test.com",
+            username="governmentprivacy",
+            password="SecurePass123!",
+            role="government",
+        )
+        farmer_user = User.objects.create_user(
+            email="private-farmer@test.com",
+            username="privatefarmer",
+            password="SecurePass123!",
+            role="farmer",
+        )
+        farmer = Farmer.objects.create(user=farmer_user, village="Private village")
+        self.client.force_authenticate(user=government)
+
+        for route in (
+            f"/api/farmers/me/badges/?farmer_id={farmer.pk}",
+            f"/api/farmers/me/health-card/?farmer_id={farmer.pk}",
+        ):
+            with self.subTest(route=route):
+                response = self.client.get(route)
+                self.assertEqual(response.status_code, 404)
+                self.assertNotIn(b"private-farmer@test.com", response.content)
+                self.assertNotIn(b"Private village", response.content)
 
 
 class JWTAuthenticationFlowTestCase(APITestCase):
@@ -129,7 +188,6 @@ class RoleDashboardAccessTestCase(APITestCase):
             "farmer": "/api/dashboard/farmer/",
             "buyer": "/api/dashboard/buyer/",
             "government": "/api/dashboard/government/",
-            "bank": "/api/dashboard/bank/",
             "admin": "/api/dashboard/admin/",
         }
         for role, url in endpoints.items():
@@ -141,6 +199,11 @@ class RoleDashboardAccessTestCase(APITestCase):
                 status.HTTP_200_OK,
                 f"{role} dashboard failed: {resp.data}",
             )
+
+        bank = self._create_user("bank", "bank@dash.test")
+        self.client.force_authenticate(user=bank)
+        response = self.client.get("/api/dashboard/bank/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_village_analytics_government_access(self):
         user = self._create_user("government", "gov@village.test")
@@ -242,7 +305,7 @@ class LoanEligibilityFlowTestCase(APITestCase):
 
     def test_calculate_loan_service(self):
         prediction = calculate_loan_eligibility(self.farmer)
-        self.assertGreater(prediction.eligible_amount, Decimal("0"))
+        self.assertGreater(prediction.eligible_amount, Decimal(0))
         self.assertIn(prediction.risk_category, ["low", "medium", "high"])
 
     def test_calculate_loan_api(self):
@@ -278,8 +341,8 @@ class APIRoutesSmokeTestCase(APITestCase):
             farmer=self.farmer,
             crop_name="Wheat",
             season="rabi",
-            area_used=Decimal("2"),
-            yield_amount=Decimal("100"),
+            area_used=Decimal(2),
+            yield_amount=Decimal(100),
             harvest_date="2025-01-15",
         )
         self.client.force_authenticate(user=self.user)

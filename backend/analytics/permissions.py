@@ -13,13 +13,12 @@ class AnalyticsPermission(permissions.BasePermission):
         if dashboard == "government":
             return request.user.role in ("government", "admin") or request.user.is_superuser
         if dashboard == "bank":
-            return request.user.role in ("bank", "admin") or request.user.is_superuser
+            return request.user.role == "admin" or request.user.is_superuser
         if dashboard == "buyer":
             return request.user.role == "buyer"
         if dashboard == "village":
             return request.user.role in (
                 "government",
                 "admin",
-                "bank",
             ) or request.user.is_superuser
         return False
