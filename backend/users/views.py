@@ -1,3 +1,7 @@
+from django.db.models import FileField
+from django.forms.models import model_to_dict
+from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -5,7 +9,6 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from drf_spectacular.utils import extend_schema
 
 from .serializers import (
     ChangePasswordSerializer,
@@ -110,6 +113,92 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class AccountDataExportView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(tags=["Authentication"], responses={200: dict})
+    def get(self, request):
+        from complaints.models import Complaint
+        from crops.models import CropRecord
+        from farmers.models import Buyer, Farmer
+        from lands.models import LandRecord
+        from loans.models import LoanPrediction
+        from marketplace.models import Listing, Transaction
+        from notifications.models import Notification
+        from schemes.models import SchemeApplication
+        from trustscore.models import TrustScore
+
+        def record_data(instance, exclude=()):
+            data = model_to_dict(instance, exclude=exclude)
+            for field in instance._meta.concrete_fields:
+                if isinstance(field, FileField):
+                    data[field.name] = getattr(instance, field.name).name or None
+            return data
+
+        def export_records(queryset, exclude=()):
+            return [
+                record_data(item, exclude=exclude)
+                for item in queryset.order_by("pk")
+            ]
+
+        user = request.user
+        export = {
+            "exported_at": timezone.now(),
+            "account": {
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "phone_number": user.phone_number,
+                "role": user.role,
+                "created_at": user.created_at,
+            },
+            "notifications": export_records(Notification.objects.filter(user=user)),
+        }
+
+        farmer = Farmer.objects.filter(user=user).first()
+        if farmer:
+            export["farmer_profile"] = record_data(farmer, exclude=["user"])
+            export["land_records"] = export_records(
+                LandRecord.objects.filter(farmer=farmer)
+            )
+            export["crop_records"] = export_records(
+                CropRecord.objects.filter(farmer=farmer)
+            )
+            export["market_listings"] = export_records(
+                Listing.objects.filter(farmer=farmer)
+            )
+            export["transactions"] = export_records(
+                Transaction.objects.filter(listing__farmer=farmer), exclude=["buyer"]
+            )
+            export["complaints"] = export_records(
+                Complaint.objects.filter(farmer=farmer)
+            )
+            export["scheme_applications"] = export_records(
+                SchemeApplication.objects.filter(farmer=farmer)
+            )
+            score = TrustScore.objects.filter(farmer=farmer).first()
+            export["trust_score"] = record_data(score) if score else None
+            export["loan_predictions"] = export_records(
+                LoanPrediction.objects.filter(farmer=farmer)
+            )
+
+        buyer = Buyer.objects.filter(user=user).first()
+        if buyer:
+            export["buyer_profile"] = record_data(buyer, exclude=["user"])
+            export["transactions"] = export_records(
+                Transaction.objects.filter(buyer=buyer), exclude=["listing"]
+            )
+
+        response = Response(export)
+        response["Content-Disposition"] = (
+            f'attachment; filename="unnati-data-export-{user.pk}-'
+            f'{timezone.localdate().isoformat()}.json"'
+        )
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 class ChangePasswordView(APIView):

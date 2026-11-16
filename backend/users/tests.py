@@ -4,7 +4,11 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from farmers.models import Farmer
+from complaints.models import Complaint
+from crops.models import CropRecord
+from farmers.models import Buyer, Farmer
+from lands.models import LandRecord
+from marketplace.models import Listing, Transaction
 
 User = get_user_model()
 
@@ -102,6 +106,85 @@ class AuthAPITestCase(APITestCase):
         self.assertEqual(me_response.status_code, status.HTTP_200_OK)
         self.assertEqual(me_response.data["email"], "login@test.com")
 
+    def test_account_export_contains_only_authenticated_users_records(self):
+        owner = User.objects.create_user(
+            email="export@test.com", username="export", password="SecurePass123!"
+        )
+        other = User.objects.create_user(
+            email="other@test.com", username="other", password="SecurePass123!"
+        )
+        farmer = Farmer.objects.create(
+            user=owner, aadhaar_number="123456789012", address="Private address"
+        )
+        other_farmer = Farmer.objects.create(user=other, aadhaar_number="987654321098")
+        LandRecord.objects.create(
+            farmer=farmer, survey_number="OWN-1", total_area="2.50", soil_type="black",
+            irrigation_type="well", location="Own village",
+        )
+        LandRecord.objects.create(
+            farmer=other_farmer, survey_number="OTHER-1", total_area="3.00",
+            soil_type="red",
+            irrigation_type="canal", location="Other village",
+        )
+        Complaint.objects.create(
+            farmer=farmer, title="My complaint", description="My private note"
+        )
+        Complaint.objects.create(
+            farmer=other_farmer, title="Other complaint", description="Do not include"
+        )
+        self.client.force_authenticate(user=owner)
+
+        response = self.client.get(reverse("account_data_export"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertEqual(
+            response.data["farmer_profile"]["aadhaar_number"], "123456789012"
+        )
+        self.assertEqual(
+            [row["survey_number"] for row in response.data["land_records"]], ["OWN-1"]
+        )
+        self.assertEqual(
+            [row["title"] for row in response.data["complaints"]], ["My complaint"]
+        )
+        self.assertNotIn("Do not include", str(response.data))
+        self.assertNotIn("987654321098", str(response.data))
+
+    def test_account_export_requires_auth_and_hides_farmer_details_from_buyer(self):
+        response = self.client.get(reverse("account_data_export"))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        buyer_user = User.objects.create_user(
+            email="buyer-export@test.com", username="buyer-export",
+            password="SecurePass123!", role="buyer",
+        )
+        farmer_user = User.objects.create_user(
+            email="farmer-export@test.com", username="farmer-export",
+            password="SecurePass123!",
+        )
+        buyer = Buyer.objects.create(user=buyer_user, company_name="Buyer Co")
+        farmer = Farmer.objects.create(
+            user=farmer_user, address="Farmer private address"
+        )
+        listing_crop = CropRecord.objects.create(
+            farmer=farmer, crop_name="Wheat", season="rabi", area_used="1.00",
+            yield_amount="2.00", harvest_date="2026-11-17",
+        )
+        listing = Listing.objects.create(
+            farmer=farmer, crop=listing_crop, quantity="2.00", price_per_unit="20.00"
+        )
+        Transaction.objects.create(
+            listing=listing, buyer=buyer, quantity="1.00", total_amount="20.00"
+        )
+        self.client.force_authenticate(user=buyer_user)
+
+        response = self.client.get(reverse("account_data_export"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["transactions"]), 1)
+        self.assertNotIn("farmer_profile", response.data)
+        self.assertNotIn("Farmer private address", str(response.data))
+
     def test_login_throttle_blocks_repeated_attempts(self):
         cache.clear()
         responses = [
@@ -114,6 +197,9 @@ class AuthAPITestCase(APITestCase):
         ]
         cache.clear()
         self.assertTrue(
-            all(response.status_code == status.HTTP_401_UNAUTHORIZED for response in responses[:10])
+            all(
+                response.status_code == status.HTTP_401_UNAUTHORIZED
+                for response in responses[:10]
+            )
         )
         self.assertEqual(responses[10].status_code, status.HTTP_429_TOO_MANY_REQUESTS)

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, User } from "lucide-react";
+import { CheckCircle2, Download, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { buyersApi, farmersApi } from "@/lib/api";
@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { useAuth } from "@/providers/auth-provider";
 import { useTranslation } from "@/providers/language-provider";
+import { authApiClient } from "@/lib/api/client";
 
 const farmerSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -35,11 +36,48 @@ const buyerSchema = z.object({
   phone_number: z.string().optional(),
 });
 
+function AccountDataExportCard({ onExport, exporting }: { onExport: () => void; exporting: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardHeader><CardTitle>{t("pages.profile.exportDataTitle")}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{t("pages.profile.exportDataDescription")}</p>
+        <Button type="button" variant="outline" onClick={onExport} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {exporting ? t("pages.profile.exportingData") : t("pages.profile.exportData")}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [exporting, setExporting] = useState(false);
+
+  const exportAccountData = async () => {
+    setExporting(true);
+    try {
+      const response = await authApiClient.get<Blob>("/me/export/", { responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "unnati-account-data.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      toast.success(t("pages.profile.exportReady"));
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t("pages.profile.exportFailed")));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const { data: farmers, isLoading: farmersLoading } = useQuery({
     queryKey: ["farmers"],
@@ -247,6 +285,7 @@ export default function ProfilePage() {
             </form>
           </CardContent>
         </Card>
+        <AccountDataExportCard onExport={exportAccountData} exporting={exporting} />
       </div>
     );
   }
@@ -330,6 +369,7 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
+        <AccountDataExportCard onExport={exportAccountData} exporting={exporting} />
       </div>
     );
   }
@@ -353,6 +393,7 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+      <AccountDataExportCard onExport={exportAccountData} exporting={exporting} />
     </div>
   );
 }
