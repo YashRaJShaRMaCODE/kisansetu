@@ -309,6 +309,9 @@ export function FarmerDashboardView() {
             <h2 className="mb-4 text-lg font-semibold text-emerald-950">
               {t("pages.dashboard.recommendedSchemes")}
             </h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {t("pages.dashboard.schemeDiscoveryNote")}
+            </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {schemes.map((scheme) => (
                 <Link
@@ -324,9 +327,9 @@ export function FarmerDashboardView() {
                       <p className="mt-3 text-sm font-semibold text-emerald-600">
                         {t("pages.dashboard.benefit")} {formatCurrency(scheme.benefit_amount)}
                       </p>
-                      {"match_score" in scheme && (
-                        <p className="mt-1 text-xs text-emerald-500">
-                          {t("pages.dashboard.match", { percent: scheme.match_score })}
+                      {"reasons" in scheme && scheme.reasons.length > 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {scheme.reasons.join(" ")}
                         </p>
                       )}
                     </CardContent>

@@ -490,6 +490,7 @@ export const en: TranslationDict = {
       trustScoreBreakdown: "Trust Score Breakdown",
       loanRecommendation: "Loan Recommendation",
       recommendedSchemes: "Recommended Schemes",
+      schemeDiscoveryNote: "These are crop-text discovery suggestions only, not eligibility decisions. Check the official scheme rules before applying.",
       recentActivity: "Recent Activity",
       featuredListings: "Featured Listings",
       purchaseHistory: "Purchase History",

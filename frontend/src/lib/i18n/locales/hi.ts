@@ -490,6 +490,7 @@ export const hi: TranslationDict = {
       trustScoreBreakdown: "स्कोर विवरण",
       loanRecommendation: "ऋण सिफ़ारिश",
       recommendedSchemes: "अनुशंसित योजनाएँ",
+      schemeDiscoveryNote: "ये केवल फसल के नाम पर आधारित खोज सुझाव हैं, पात्रता का निर्णय नहीं। आवेदन से पहले योजना के आधिकारिक नियम जाँचें।",
       recentActivity: "हाल की गतिविधि",
       featuredListings: "विशेष सूचियाँ",
       purchaseHistory: "खरीद इतिहास",

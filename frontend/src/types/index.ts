@@ -100,7 +100,6 @@ export interface SchemeRecommendation {
   name: string;
   description: string;
   benefit_amount: number;
-  match_score: number;
   reasons: string[];
 }
 
