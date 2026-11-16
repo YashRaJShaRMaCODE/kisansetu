@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Landmark, ShieldCheck, Sprout, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/shared/language-toggle";
+import { LeadHubSignup } from "@/components/shared/leadhub-signup";
 import { useLanguage } from "@/providers/language-provider";
 
 export default function HomePage() {
@@ -72,6 +73,8 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
+        <LeadHubSignup />
 
         <section className="landing-close">
           <div><p className="landing-eyebrow">{t("landing.closeEyebrow")}</p><h2>{t("landing.closeTitle")}</h2></div>

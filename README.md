@@ -12,6 +12,7 @@ A full-stack farmer services platform with a Django REST API and Next.js fronten
 ## Key Features
 
 - Role-based dashboards (`farmer`, `buyer`, `government`, `bank`, `admin`)
+- Authenticated `GET /api/auth/me/export/` downloads the signed-in account's own profile and linked records as JSON; uploaded files are listed by path, not included in the download.
 - Trust score, loan eligibility, schemes, marketplace, complaints, health card
 - The trust score is a demo heuristic: its sales component uses completed trade value, not buyer reviews. It does not determine loan or scheme decisions.
 - **Hindi / English UI toggle** (top-right header)
@@ -68,7 +69,10 @@ GEMINI_API_KEY=          # optional — guided fallback works without it
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000/api
+NEXT_PUBLIC_LEADHUB_URL=   # Optional; deployed HTTPS LeadHub origin only. Never place secrets here.
 ```
+
+The marketing page's research mailing form renders only when the public HTTPS LeadHub URL is configured. It requires explicit email consent and the central service sends only a confirmation message until the address is confirmed. A separate unchecked option requests related-product suggestions; only the product ID is sent after selection, and no farmer activity or profile is shared. This does not replace farmer account registration.
 
 After changing `.env`, restart Django (`python manage.py runserver`).
 
