@@ -5,7 +5,7 @@ from threading import Barrier
 from types import SimpleNamespace
 from unittest import skipUnless
 
-from django.db import close_old_connections, connection
+from django.db import connection, connections
 from django.test import TestCase, TransactionTestCase
 from rest_framework.exceptions import ValidationError
 
@@ -212,7 +212,7 @@ class MarketplacePostgresConcurrencyTests(TransactionTestCase):
         start_together = Barrier(2)
 
         def checkout():
-            close_old_connections()
+            connections.close_all()
             try:
                 serializer = TransactionSerializer(data={
                     "listing": listing.pk,
@@ -228,7 +228,7 @@ class MarketplacePostgresConcurrencyTests(TransactionTestCase):
             except ValidationError:
                 return "rejected"
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             outcomes = [future.result(timeout=20) for future in (pool.submit(checkout), pool.submit(checkout))]
